@@ -1,0 +1,11 @@
+{
+    "name": "cs2rockthevote",
+    "alias": "cs2rtv",
+    "display_name": "CS2 Rock The Vote",
+    "description": "CS2 Rock The Vote plugin for MM:S",
+    "author": "jvnipers",
+    "url": "http://github.com/FemboyKZ/mm-cs2rockthevote",
+    "log_tag": "RTV",
+    "license": "GPLv3",
+    "version": "1.0.0"
+}
