@@ -5,3 +5,6 @@
 	path = hl2sdk-cs2
 	url = https://github.com/alliedmodders/hl2sdk
 	branch = cs2
+[submodule "vendor/mm-cs2admin"]
+	path = vendor/mm-cs2admin
+	url = https://github.com/Femboykz/mm-cs2admin
