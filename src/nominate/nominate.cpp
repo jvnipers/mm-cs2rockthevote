@@ -117,6 +117,7 @@ void NominateManager::CommandNominate(int slot, const char *arg)
 												if (e.mapName.empty())
 												{
 													META_CONPRINTF("[CS2RTV] Workshop lookup failed for ID %s\n", wsId.c_str());
+													RTV_PrintToChat(slot, "\x07Workshop map \x04%s\x07 not found.", wsId.c_str());
 													return;
 												}
 												const MapEntry *added = g_MapLister.AddDynamicMap(e);
@@ -124,6 +125,7 @@ void NominateManager::CommandNominate(int slot, const char *arg)
 												{
 													META_CONPRINTF("[CS2RTV] Workshop map '%s' added dynamically from API.\n",
 																   added->mapName.c_str());
+													NominateMap(slot, added);
 												}
 											});
 		return;
@@ -233,7 +235,7 @@ void NominateManager::ShowNominateMenu(int slot)
 
 	for (const auto &e : maps)
 	{
-		bool disabled = (e.mapName == m_currentMap || e.displayName == m_currentMap);
+		bool disabled = (e.mapName == m_currentMap);
 		const std::string &display = e.displayName.empty() ? e.mapName : e.displayName;
 
 		bool alreadyNom = m_nomCounts.count(e.mapName) > 0;
@@ -264,7 +266,7 @@ void NominateManager::NominateMap(int slot, const MapEntry *entry)
 	const std::string &mapName = entry->mapName;
 	const std::string &display = entry->displayName.empty() ? entry->mapName : entry->displayName;
 
-	if (mapName == m_currentMap || display == m_currentMap)
+	if (mapName == m_currentMap)
 	{
 		RTV_PrintToChat(slot, "\x07You cannot nominate the current map.");
 		return;
