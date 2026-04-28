@@ -116,7 +116,7 @@ static bool PerformRequest(const HttpRequest &req, std::string &outBody)
 	}
 
 	// Set timeouts: resolve=5s, connect=5s, send=15s, receive=15s
-	DWORD t5s  = 5000;
+	DWORD t5s = 5000;
 	DWORD t15s = 15000;
 	WinHttpSetTimeouts(hRequest, t5s, t5s, t15s, t15s);
 

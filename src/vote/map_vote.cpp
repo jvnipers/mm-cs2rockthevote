@@ -519,12 +519,16 @@ void MapVoteManager::StartRunoff(const std::vector<int> &tiedIndices)
 			[this]()
 			{
 				if (!m_voteActive)
+				{
 					return;
+				}
 				CGlobalVars *g = GetGameGlobals();
 				float now = g ? g->curtime : 0.0f;
 				int secsLeft = static_cast<int>(m_voteEndTime - now);
 				if (secsLeft > 0)
+				{
 					SendCountdownReminder(secsLeft);
+				}
 			},
 			iv);
 	}
@@ -537,18 +541,26 @@ void MapVoteManager::StartRunoff(const std::vector<int> &tiedIndices)
 			[this]()
 			{
 				if (!m_voteActive)
+				{
 					return;
+				}
 				CGlobalVars *g = GetGameGlobals();
 				float curtime2 = g ? g->curtime : 0.0f;
 				for (int i = 0; i <= MAXPLAYERS; i++)
 				{
 					PlayerInfo *pi = g_RTVPlayerManager.GetPlayer(i);
 					if (!pi || !pi->connected || pi->fakePlayer)
+					{
 						continue;
+					}
 					if (m_playerVotes.count(i))
+					{
 						continue;
+					}
 					if (!g_ChatMenus.HasMenu(i))
+					{
 						ShowVoteMenuToPlayer(i);
+					}
 				}
 			},
 			iv);

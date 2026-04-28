@@ -262,14 +262,17 @@ void NominateManager::ShowNominateMenu(int slot)
 		}
 
 		std::string capturedMapName = e.mapName;
-		def.AddItem(label,
-					[this, capturedMapName](int playerSlot)
-					{
-						const MapEntry *entry = g_MapLister.FindExact(capturedMapName);
-						if (entry)
-							NominateMap(playerSlot, entry);
-					},
-					disabled);
+		def.AddItem(
+			label,
+			[this, capturedMapName](int playerSlot)
+			{
+				const MapEntry *entry = g_MapLister.FindExact(capturedMapName);
+				if (entry)
+				{
+					NominateMap(playerSlot, entry);
+				}
+			},
+			disabled);
 	}
 
 	g_ChatMenus.ShowMenu(slot, def, curtime);

@@ -172,7 +172,9 @@ void RTV_ChatToAll(const char *fmt, ...)
 	{
 		unsigned char c = (unsigned char)*src;
 		if (c < 0x01 || c > 0x10)
+		{
 			*dst++ = *src;
+		}
 	}
 	*dst = '\0';
 	META_CONPRINTF("[RTV] %s\n", conBuf);

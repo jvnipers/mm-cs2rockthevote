@@ -39,7 +39,6 @@ void RTVTimerSystem::KillTimer(int id)
 
 void RTVTimerSystem::Process(float curtime)
 {
-
 	const int count = static_cast<int>(m_timers.size());
 	for (int i = 0; i < count; i++)
 	{

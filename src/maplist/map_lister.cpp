@@ -487,11 +487,11 @@ void MapLister::LookupByWorkshopIdAsync(const std::string &workshopId, std::func
 											 fallback.isWorkshop = true;
 										 }
 									 }
-							 // Dispatch to game thread: callback touches game state.
-							 MapEntry captured = std::move(fallback);
-							 RTV_QueueMainThread([callback, captured]() mutable { callback(std::move(captured)); });
-						 });
-			});
+									 // Dispatch to game thread: callback touches game state.
+									 MapEntry captured = std::move(fallback);
+									 RTV_QueueMainThread([callback, captured]() mutable { callback(std::move(captured)); });
+								 });
+				});
 }
 
 void MapLister::LookupByNameAsync(const std::string &name, std::function<void(MapEntry)> callback) const
@@ -515,7 +515,7 @@ void MapLister::LookupByNameAsync(const std::string &name, std::function<void(Ma
 					// Dispatch to game thread: callback touches game state.
 					MapEntry captured = std::move(found);
 					RTV_QueueMainThread([callback, captured]() mutable { callback(std::move(captured)); });
-			});
+				});
 }
 
 void MapLister::GenerateMaplistAsync(const std::string &outputPath) const
