@@ -6,6 +6,7 @@
 
 #include "vendor/mm-cs2admin/src/public/ics2admin.h"
 #include <cstdint>
+#include <string>
 
 // Call once in AllPluginsLoaded() to try to acquire the ICS2Admin interface.
 void RTV_AdminBridge_Init();
