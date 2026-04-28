@@ -515,6 +515,7 @@ void MapLister::LookupByNameAsync(const std::string &name, std::function<void(Ma
 					// Dispatch to game thread: callback touches game state.
 					MapEntry captured = std::move(found);
 					RTV_QueueMainThread([callback, captured]() mutable { callback(std::move(captured)); });
+			});
 }
 
 void MapLister::GenerateMaplistAsync(const std::string &outputPath) const
