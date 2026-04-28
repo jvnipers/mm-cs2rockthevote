@@ -2,6 +2,26 @@
 
 CS2 rtv plugin using Metamod: Source
 
+## Usage
+
+### Requirements
+
+* CS2 Dedicated Server
+* [Metamod: Source 2.0](https://www.metamodsource.net/downloads.php?branch=dev)
+* (Optional*) [mm-cs2admin](https://github.com/FemboyKZ/mm-cs2admin)
+
+\*Admin commands like `reloadrtv` and `mapmenu` will not work without it.
+
+### Install
+
+1. Download the [latest release](https://github.com/FemboyKZ/mm-cs2rockthevote/releases/latest) and extract it in your server's root folder (`/game/csgo/`).
+2. Configure the plugin in `core.cfg` and the maplist in `maplist.txt`
+
+### Configuration
+
+* `/cfg/cs2rtv/core.cfg` - Main config file
+* `/cfg/maplist.txt` - Maplist file
+
 ## Build
 
 ### Prerequisites
@@ -24,7 +44,3 @@ ambuild
 * [SourceMod](https://github.com/alliedmodders/sourcemod)
 * [zer0.k's MetaMod Sample plugin fork](https://github.com/zer0k-z/mm_misc_plugins)
 * [cs2kz-metamod](https://github.com/KZGlobalTeam/cs2kz-metamod)
-
-## Contributing
-
-tba
