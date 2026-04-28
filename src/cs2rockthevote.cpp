@@ -341,7 +341,7 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 		RETURN_META(MRES_SUPERCEDE);
 	}
 
-	if (strcmp(cmdBuf, "maps") == 0)
+	if (strcmp(cmdBuf, "listmaps") == 0)
 	{
 		g_NominateManager.CommandMaps(slot);
 		RETURN_META(MRES_SUPERCEDE);
@@ -416,7 +416,7 @@ CON_COMMAND_F(mm_nominate, "Nominate a map for the next vote", FCVAR_RELEASE | F
 	g_NominateManager.CommandNominate(slot, arg);
 }
 
-CON_COMMAND_F(mm_maps, "List available maps to your console", FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE)
+CON_COMMAND_F(mm_listmaps, "List available maps to your console", FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE)
 {
 	int slot = context.GetPlayerSlot().Get();
 	g_NominateManager.CommandMaps(slot);
