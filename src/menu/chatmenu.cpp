@@ -11,7 +11,7 @@ ChatMenuHandler g_ChatMenus;
 static bool IsNumericInput(const char *text, int &outNum)
 {
 	// Accept "1", "2", ... "9", "0" - optionally with whitespace
-	// Also accept "!1", "!2", etc. (some plugins require ! prefix for menu input)
+	// Also accept "!1", "!2", etc.
 	const char *p = text;
 	while (*p == ' ' || *p == '\t')
 	{
@@ -22,8 +22,8 @@ static bool IsNumericInput(const char *text, int &outNum)
 		return false;
 	}
 
-	// Strip optional leading '!'
-	if (*p == '!')
+	// Strip optional leading '!' or '/' (command prefix chars used by some plugins)
+	if (*p == '!' || *p == '/')
 	{
 		p++;
 	}

@@ -173,6 +173,20 @@ static void ConfigHandler(const std::string &section, const std::string &key, co
 		{
 			cfg->general.kzTierMode = value;
 		}
+		else if (k == "commandprefix")
+		{
+			if (!value.empty())
+			{
+				cfg->general.commandPrefix = value;
+			}
+		}
+		else if (k == "silentcommandprefix")
+		{
+			if (!value.empty())
+			{
+				cfg->general.silentCommandPrefix = value;
+			}
+		}
 	}
 }
 

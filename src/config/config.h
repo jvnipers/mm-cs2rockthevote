@@ -47,6 +47,8 @@ struct GeneralCfg
 	bool includeSpectator = true;
 	std::string chatPrefix = "\x07[RTV]\x01 "; // red "[RTV]" + default
 	std::string adminPermission = "root";
+	std::string commandPrefix = "!";       // normal: message visible in chat
+	std::string silentCommandPrefix = "/"; // silent: message suppressed
 	bool enableMapValidation = false;
 	std::string steamApiKey = "";
 	std::string discordWebhook = "";

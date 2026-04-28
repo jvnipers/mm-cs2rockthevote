@@ -262,11 +262,31 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 		}
 	}
 
-	// Second pass: chat commands (must start with ! or /)
-	if (len < 2 || (msg[0] != '!' && msg[0] != '/'))
+	// Second pass: chat commands
+	if (len < 2)
 	{
 		RETURN_META(MRES_IGNORED);
 	}
+
+	const char cmdPfxChar = g_RTVConfig.general.commandPrefix.empty() ? '!' : g_RTVConfig.general.commandPrefix[0];
+	const char silentPfxChar = g_RTVConfig.general.silentCommandPrefix.empty() ? '/' : g_RTVConfig.general.silentCommandPrefix[0];
+
+	bool isSilent;
+	if (msg[0] == cmdPfxChar)
+	{
+		isSilent = false;
+	}
+	else if (msg[0] == silentPfxChar)
+	{
+		isSilent = true;
+	}
+	else
+	{
+		RETURN_META(MRES_IGNORED);
+	}
+
+	// Normal prefix: message stays visible in chat. Silent prefix: suppress it.
+	const MetaRes cmdReturn = isSilent ? MRES_SUPERCEDE : MRES_IGNORED;
 
 	// Parse command + optional argument
 	char cmdBuf[64];
@@ -318,7 +338,7 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 											g_MapVoteManager.StartVote(true, noms);
 										});
 		}
-		RETURN_META(MRES_SUPERCEDE);
+		RETURN_META(cmdReturn);
 	}
 
 	if (strcmp(cmdBuf, "nominate") == 0 || strcmp(cmdBuf, "nom") == 0)
@@ -331,7 +351,7 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 		{
 			RTV_PrintToChat(slot, "\x07Nominations are disabled.");
 		}
-		RETURN_META(MRES_SUPERCEDE);
+		RETURN_META(cmdReturn);
 	}
 
 	if (strcmp(cmdBuf, "mapmenu") == 0 || strcmp(cmdBuf, "mm") == 0)
@@ -341,28 +361,28 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 		if (flag != 0 && !RTV_AdminBridge_HasFlag(slot, flag))
 		{
 			RTV_PrintToChat(slot, "\x07You don't have permission to use this command.");
-			RETURN_META(MRES_SUPERCEDE);
+			RETURN_META(cmdReturn);
 		}
 		ShowMapChooserMenu(slot);
-		RETURN_META(MRES_SUPERCEDE);
+		RETURN_META(cmdReturn);
 	}
 
 	if (strcmp(cmdBuf, "listmaps") == 0)
 	{
 		g_NominateManager.CommandMaps(slot);
-		RETURN_META(MRES_SUPERCEDE);
+		RETURN_META(cmdReturn);
 	}
 
 	if (strcmp(cmdBuf, "reloadmaps") == 0)
 	{
 		g_NominateManager.CommandReloadMaps(slot);
-		RETURN_META(MRES_SUPERCEDE);
+		RETURN_META(cmdReturn);
 	}
 
 	if (strcmp(cmdBuf, "revote") == 0)
 	{
 		g_MapVoteManager.CommandRevote(slot);
-		RETURN_META(MRES_SUPERCEDE);
+		RETURN_META(cmdReturn);
 	}
 
 	if (strcmp(cmdBuf, "reloadrtv") == 0)
@@ -372,7 +392,7 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 		if (flag != 0 && !RTV_AdminBridge_HasFlag(slot, flag))
 		{
 			RTV_PrintToChat(slot, "\x07You don't have permission to use this command.");
-			RETURN_META(MRES_SUPERCEDE);
+			RETURN_META(cmdReturn);
 		}
 
 		char cfgPath[512];
@@ -386,7 +406,7 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 			RTV_PrintToChat(slot, "\x07"
 								  "Failed to reload RTV config.");
 		}
-		RETURN_META(MRES_SUPERCEDE);
+		RETURN_META(cmdReturn);
 	}
 
 	RETURN_META(MRES_IGNORED);
