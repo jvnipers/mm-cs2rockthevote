@@ -1,5 +1,6 @@
 #include "cs2rockthevote.h"
 #include "common.h"
+#include <cctype>
 #include <stdio.h>
 
 #include "admin/admin_bridge.h"
@@ -295,6 +296,11 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 	{
 		strncpy(cmdBuf, msg + 1, sizeof(cmdBuf) - 1);
 		cmdBuf[sizeof(cmdBuf) - 1] = '\0';
+	}
+
+	for (char *p = cmdBuf; *p; p++)
+	{
+		*p = static_cast<char>(tolower(static_cast<unsigned char>(*p)));
 	}
 
 	if (strcmp(cmdBuf, "rtv") == 0)
