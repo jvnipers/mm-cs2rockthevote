@@ -54,7 +54,8 @@ jobs:
           mkdir -p staging/addons
           cp -r build/package/addons/* staging/addons/
           mkdir -p staging/cfg/cs2rtv
-          cp configs/*.cfg configs/*.txt staging/cfg/cs2rtv/
+          cp configs/core.cfg staging/cfg/cs2rtv/
+          cp configs/maplist.txt staging/cfg/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
@@ -106,7 +107,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path staging/addons | Out-Null
           Copy-Item -Recurse build/package/addons/* staging/addons/
           New-Item -ItemType Directory -Force -Path staging/cfg/cs2rtv | Out-Null
-          Copy-Item configs/*.cfg, configs/*.txt staging/cfg/cs2rtv/
+          Copy-Item configs/core.cfg staging/cfg/cs2rtv/
+          Copy-Item configs/maplist.txt staging/cfg/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
