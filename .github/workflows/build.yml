@@ -53,13 +53,13 @@ jobs:
         run: |
           mkdir -p staging/addons
           cp -r build/package/addons/* staging/addons/
-          mkdir -p staging/cfg/cs2rockthevote
-          cp configs/*.cfg configs/*.txt staging/cfg/cs2rockthevote/
+          mkdir -p staging/cfg/cs2rtv
+          cp configs/*.cfg configs/*.txt staging/cfg/cs2rtv/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: cs2rockthevote-linux
+          name: cs2rtv-linux
           path: staging
 
   build-windows:
@@ -105,13 +105,13 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path staging/addons | Out-Null
           Copy-Item -Recurse build/package/addons/* staging/addons/
-          New-Item -ItemType Directory -Force -Path staging/cfg/cs2rockthevote | Out-Null
-          Copy-Item configs/*.cfg, configs/*.txt staging/cfg/cs2rockthevote/
+          New-Item -ItemType Directory -Force -Path staging/cfg/cs2rtv | Out-Null
+          Copy-Item configs/*.cfg, configs/*.txt staging/cfg/cs2rtv/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: cs2rockthevote-windows
+          name: cs2rtv-windows
           path: staging
 
   release:
@@ -126,24 +126,24 @@ jobs:
       - name: Download Linux artifact
         uses: actions/download-artifact@v8
         with:
-          name: cs2rockthevote-linux
-          path: cs2rockthevote-linux
+          name: cs2rtv-linux
+          path: cs2rtv-linux
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v8
         with:
-          name: cs2rockthevote-windows
-          path: cs2rockthevote-windows
+          name: cs2rtv-windows
+          path: cs2rtv-windows
 
       - name: Create archives
         run: |
-          cd cs2rockthevote-linux && zip -r ../cs2rockthevote-${{ github.ref_name }}-linux.zip . && cd ..
-          cd cs2rockthevote-windows && zip -r ../cs2rockthevote-${{ github.ref_name }}-windows.zip . && cd ..
+          cd cs2rtv-linux && zip -r ../cs2rtv-${{ github.ref_name }}-linux.zip . && cd ..
+          cd cs2rtv-windows && zip -r ../cs2rtv-${{ github.ref_name }}-windows.zip . && cd ..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            cs2rockthevote-${{ github.ref_name }}-linux.zip
-            cs2rockthevote-${{ github.ref_name }}-windows.zip
+            cs2rtv-${{ github.ref_name }}-linux.zip
+            cs2rtv-${{ github.ref_name }}-windows.zip
           generate_release_notes: true
