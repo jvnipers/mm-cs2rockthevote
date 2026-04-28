@@ -509,6 +509,51 @@ void MapVoteManager::StartRunoff(const std::vector<int> &tiedIndices)
 	RTV_ChatToAll("\x04Runoff vote started!");
 	SendVoteMenuToAll();
 
+	const MapVoteCfg &cfg = g_RTVConfig.mapvote;
+
+	if (cfg.countdownInterval > 0)
+	{
+		float iv = static_cast<float>(cfg.countdownInterval);
+		m_countdownTimerId = g_Timers.CreateTimer(
+			iv,
+			[this]()
+			{
+				if (!m_voteActive)
+					return;
+				CGlobalVars *g = GetGameGlobals();
+				float now = g ? g->curtime : 0.0f;
+				int secsLeft = static_cast<int>(m_voteEndTime - now);
+				if (secsLeft > 0)
+					SendCountdownReminder(secsLeft);
+			},
+			iv);
+	}
+
+	if (cfg.chatChoiceReminder && cfg.chatChoiceInterval > 0)
+	{
+		float iv = static_cast<float>(cfg.chatChoiceInterval);
+		m_reminderTimerId = g_Timers.CreateTimer(
+			iv,
+			[this]()
+			{
+				if (!m_voteActive)
+					return;
+				CGlobalVars *g = GetGameGlobals();
+				float curtime2 = g ? g->curtime : 0.0f;
+				for (int i = 0; i <= MAXPLAYERS; i++)
+				{
+					PlayerInfo *pi = g_RTVPlayerManager.GetPlayer(i);
+					if (!pi || !pi->connected || pi->fakePlayer)
+						continue;
+					if (m_playerVotes.count(i))
+						continue;
+					if (!g_ChatMenus.HasMenu(i))
+						ShowVoteMenuToPlayer(i);
+				}
+			},
+			iv);
+	}
+
 	m_verifyTimerId = g_Timers.CreateTimer(duration, [this]() { FinishVote(); });
 }
 
