@@ -39,8 +39,12 @@ void RTVTimerSystem::KillTimer(int id)
 
 void RTVTimerSystem::Process(float curtime)
 {
-	for (auto &entry : m_timers)
+
+	const int count = static_cast<int>(m_timers.size());
+	for (int i = 0; i < count; i++)
 	{
+		TimerEntry &entry = m_timers[i];
+
 		if (entry.killed)
 		{
 			continue;
@@ -66,13 +70,15 @@ void RTVTimerSystem::Process(float curtime)
 			entry.callback();
 		}
 
-		if (entry.interval > 0.0f)
+		// Re-fetch: callback may have pushed new entries, invalidating a cached ref.
+		TimerEntry &fired = m_timers[i];
+		if (fired.interval > 0.0f)
 		{
-			entry.executeTime = curtime + entry.interval;
+			fired.executeTime = curtime + fired.interval;
 		}
 		else
 		{
-			entry.killed = true;
+			fired.killed = true;
 		}
 	}
 
