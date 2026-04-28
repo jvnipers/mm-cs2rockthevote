@@ -61,18 +61,20 @@ static void ShowMapChooserMenu(int slot)
 	for (const auto &e : maps)
 	{
 		const std::string &display = e.displayName.empty() ? e.mapName : e.displayName;
-		const MapEntry *entryPtr = &e;
+		// Capture a value copy of the entry so we're not holding a pointer into
+		// m_maps, which can reallocate (AddDynamicMap) or be cleared (Reload).
+		MapEntry entryCopy = e;
 		def.AddItem(display,
-					[entryPtr](int /*playerSlot*/)
+					[entryCopy](int /*playerSlot*/)
 					{
 						char cmd[256];
-						if (entryPtr->isWorkshop && !entryPtr->workshopId.empty())
+						if (entryCopy.isWorkshop && !entryCopy.workshopId.empty())
 						{
-							snprintf(cmd, sizeof(cmd), "host_workshop_map %s\n", entryPtr->workshopId.c_str());
+							snprintf(cmd, sizeof(cmd), "host_workshop_map %s\n", entryCopy.workshopId.c_str());
 						}
 						else
 						{
-							snprintf(cmd, sizeof(cmd), "changelevel %s\n", entryPtr->mapName.c_str());
+							snprintf(cmd, sizeof(cmd), "changelevel %s\n", entryCopy.mapName.c_str());
 						}
 						g_pEngine->ServerCommand(cmd);
 					});

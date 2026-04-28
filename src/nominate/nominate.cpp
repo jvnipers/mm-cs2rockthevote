@@ -4,6 +4,7 @@
 #include "src/menu/chatmenu.h"
 #include "src/player/player_manager.h"
 #include "src/utils/print_utils.h"
+#include "src/vote/map_vote.h"
 
 #include <algorithm>
 #include <cctype>
@@ -150,16 +151,21 @@ void NominateManager::CommandNominate(int slot, const char *arg)
 		std::string query(arg);
 		RTV_PrintToChat(slot, "\x01Looking up map \x04%s\x01 via API...", query.c_str());
 		g_MapLister.LookupByNameAsync(query,
-									  [this, query](MapEntry e)
+									  [this, slot, query](MapEntry e)
 									  {
 										  if (!e.mapName.empty())
 										  {
-											  g_MapLister.AddDynamicMap(e);
+											  const MapEntry *added = g_MapLister.AddDynamicMap(e);
 											  META_CONPRINTF("[CS2RTV] Map '%s' added dynamically from CS2KZ API.\n", e.mapName.c_str());
+											  if (added)
+											  {
+												  NominateMap(slot, added);
+											  }
 										  }
 										  else
 										  {
 											  META_CONPRINTF("[CS2RTV] API lookup for '%s' returned no results.\n", query.c_str());
+											  RTV_PrintToChat(slot, "\x07Map \x04%s\x07 not found.", query.c_str());
 										  }
 									  });
 		return;
@@ -204,6 +210,12 @@ void NominateManager::CommandMaps(int slot) const
 
 void NominateManager::CommandReloadMaps(int slot)
 {
+	if (g_MapVoteManager.IsVoteActive() || g_MapVoteManager.IsChangeScheduled())
+	{
+		g_MapVoteManager.Reset();
+		RTV_ChatToAll("\x07Map list reloaded by admin - active vote cancelled.");
+	}
+
 	int count = g_MapLister.Reload();
 	if (count < 0)
 	{
@@ -249,8 +261,15 @@ void NominateManager::ShowNominateMenu(int slot)
 			label += " [current]";
 		}
 
-		const MapEntry *entryPtr = &e;
-		def.AddItem(label, [this, entryPtr](int playerSlot) { NominateMap(playerSlot, entryPtr); }, disabled);
+		std::string capturedMapName = e.mapName;
+		def.AddItem(label,
+					[this, capturedMapName](int playerSlot)
+					{
+						const MapEntry *entry = g_MapLister.FindExact(capturedMapName);
+						if (entry)
+							NominateMap(playerSlot, entry);
+					},
+					disabled);
 	}
 
 	g_ChatMenus.ShowMenu(slot, def, curtime);
