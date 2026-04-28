@@ -53,14 +53,6 @@ static void ConfigHandler(const std::string &section, const std::string &key, co
 		{
 			cfg->rtv.enabled = (value != "0");
 		}
-		else if (k == "mapstoshow")
-		{
-			cfg->rtv.mapsToShow = std::atoi(value.c_str());
-		}
-		else if (k == "voteduration")
-		{
-			cfg->rtv.voteDuration = std::atoi(value.c_str());
-		}
 		else if (k == "votepercentage")
 		{
 			cfg->rtv.votePercentage = std::atoi(value.c_str());

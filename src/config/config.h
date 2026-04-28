@@ -6,8 +6,6 @@
 struct RtvCfg
 {
 	bool enabled = true;
-	int mapsToShow = 6;
-	int voteDuration = 60;
 	int votePercentage = 51;
 	int reminderInterval = 60;
 	int mapChangeDelay = 5;
