@@ -459,6 +459,12 @@ void MapVoteManager::FinishVote()
 
 	if (topIndices.size() > 1)
 	{
+		if (!m_runoffActive && g_RTVConfig.mapvote.runoffEnabled)
+		{
+			RTV_ChatToAll("\x04Tie! Starting runoff vote with the tied maps.");
+			StartRunoff(topIndices);
+			return;
+		}
 		RTV_ChatToAll("\x07Tie! The map will \x07NOT\x04 be changed.");
 		g_RTVManager.OnVoteEndedNoVotes();
 		return;
