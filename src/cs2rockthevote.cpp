@@ -290,7 +290,7 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 	}
 
 	// Normal prefix: message stays visible in chat. Silent prefix: suppress it.
-	const MetaRes cmdReturn = isSilent ? MRES_SUPERCEDE : MRES_IGNORED;
+	const META_RES cmdReturn = isSilent ? MRES_SUPERCEDE : MRES_IGNORED;
 
 	// Parse command + optional argument
 	char cmdBuf[64];
