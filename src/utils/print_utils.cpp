@@ -164,7 +164,18 @@ void RTV_ChatToAll(const char *fmt, ...)
 
 	SendChatToFilter(&filter, chatBuf);
 
-	META_CONPRINTF("[RTV] %s\n", buf);
+	// Strip Source chat color codes (0x01–0x10) before console print to avoid
+	// Windows BEL (\x07) triggering a system beep.
+	char conBuf[512];
+	char *dst = conBuf;
+	for (const char *src = buf; *src && dst < conBuf + sizeof(conBuf) - 1; src++)
+	{
+		unsigned char c = (unsigned char)*src;
+		if (c < 0x01 || c > 0x10)
+			*dst++ = *src;
+	}
+	*dst = '\0';
+	META_CONPRINTF("[RTV] %s\n", conBuf);
 }
 
 void RTV_PrintToClient(int slot, const char *fmt, ...)
