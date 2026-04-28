@@ -101,10 +101,12 @@ for task in MMSPlugin.binaries:
   
   packages[sdk_name].addBinary(task.binary)
 
-  # Add custom stuff here
-  # Examples:
-  # packages[sdk_name].addFolder('some_folder_with_files')
-  # packages[sdk_name].addFile('configs/config.cfg', 'other/new_name_for_a_config.cfg')
+  # Deploy config files to cfg/cs2rtv/
+  cfg_src = os.path.join(builder.sourcePath, 'configs')
+  cfg_dst = 'cfg/cs2rtv'
+  builder.AddFolder(cfg_dst)
+  for cfg_file in glob.glob(os.path.join(cfg_src, '*.cfg')):
+    builder.AddCopy(cfg_file, os.path.join(cfg_dst, os.path.basename(cfg_file)))
 
   if task.debug:
     pdb_list.append(task.debug)

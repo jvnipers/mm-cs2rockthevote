@@ -5,10 +5,16 @@ from ambuild2.frontend.v2_2.cpp.builders import TargetSuffix
 # Edit the functions below for the extra functionality, the return should be
 # a list of path's to wanted locations
 def additionalLibs(context, binary, sdk):
-  return [
-    # Path should be relative either to hl2sdk folder or to build folder
-    # 'path/to/lib/example.lib',
-  ]
+  libs = []
+  # WinHTTP is needed by http_client.cpp on Windows (#pragma comment handles it,
+  # but adding it explicitly here keeps the build system consistent).
+  # On Linux, libcurl must be installed (e.g. apt install libcurl4-openssl-dev).
+  import sys
+  if sys.platform == 'win32':
+    pass  # winhttp.lib is linked via #pragma comment(lib, ...) in http_client.cpp
+  else:
+    libs.append('-lcurl')
+  return libs
 
 def additionalDefines(context, binary, sdk):
   return [
@@ -21,6 +27,9 @@ def additionalIncludes(context, binary, sdk):
     # os.path.join(sdk['path'], 'game', 'server'),
     # os.path.join(sdk['path'], 'public', 'entity2'),
     # 'D:/absolute/path/to/include/folder/'
+    os.path.join(builder.sourcePath, 'src'),
+    # Admin bridge needs ICS2Admin interface header from the vendor submodule
+    os.path.join(builder.sourcePath, 'vendor', 'mm-cs2admin', 'src'),
   ]
 
 def getGitHeadPath():

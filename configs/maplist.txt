@@ -1,0 +1,18 @@
+// CS2RTV Map List
+// Format: one map per line
+//
+// mapname              - stock/server map (uses ChangeLevel)
+// mapname:workshopid   - workshop map (uses host_workshop_map)
+// display name:workshopid - workshop map with custom display name
+//
+// Rename this file or create a new file called maplist.txt for your actual maplist.
+//
+// Lines starting with // or # are comments.
+// Example entries:
+
+de_dust2
+de_mirage
+cs_italy
+
+kz_grotto:3121168339
+kz_lumen (T3):3429375699

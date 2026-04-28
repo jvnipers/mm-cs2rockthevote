@@ -1,20 +1,471 @@
-#include <stdio.h>
 #include "cs2rockthevote.h"
+#include "common.h"
+#include <stdio.h>
 
+#include "admin/admin_bridge.h"
+#include "config/config.h"
+#include "maplist/map_lister.h"
+#include "menu/chatmenu.h"
+#include "nominate/nominate.h"
+#include "player/player_manager.h"
+#include "rtv/rtv_manager.h"
+#include "timers/timer_system.h"
+#include "utils/http_client.h"
+#include "utils/print_utils.h"
+#include "vote/map_vote.h"
+
+#include <engine/igameeventsystem.h>
+#include <iserver.h>
+#include <networksystem/inetworkmessages.h>
+
+// SourceHook declarations
+SH_DECL_HOOK3_void(IServerGameDLL, GameFrame, SH_NOATTRIB, 0, bool, bool, bool);
+SH_DECL_HOOK6_void(IServerGameClients, OnClientConnected, SH_NOATTRIB, 0, CPlayerSlot, const char *, uint64, const char *, const char *, bool);
+SH_DECL_HOOK4_void(IServerGameClients, ClientPutInServer, SH_NOATTRIB, 0, CPlayerSlot, char const *, int, uint64);
+SH_DECL_HOOK5_void(IServerGameClients, ClientDisconnect, SH_NOATTRIB, 0, CPlayerSlot, ENetworkDisconnectionReason, const char *, uint64,
+				   const char *);
+SH_DECL_HOOK3_void(ICvar, DispatchConCommand, SH_NOATTRIB, 0, ConCommandRef, const CCommandContext &, const CCommand &);
+
+// Global interface pointers (defined here, declared extern in common.h)
+// g_pNetworkServerService and g_pNetworkMessages are defined in interfaces.lib
+IServerGameDLL *g_pServerGameDLL = nullptr;
+IServerGameClients *g_pGameClients = nullptr;
+IVEngineServer *g_pEngine = nullptr;
+IGameEventManager2 *g_pGameEvents = nullptr;
+ICvar *g_pICvar = nullptr;
+IGameEventSystem *g_pGameEventSystem = nullptr;
+
+// Plugin globals
 CS2RTVPlugin g_ThisPlugin;
+
 PLUGIN_EXPOSE(CS2RTVPlugin, g_ThisPlugin);
+
+static void ShowMapChooserMenu(int slot)
+{
+	const auto &maps = g_MapLister.GetMaps();
+	if (maps.empty())
+	{
+		RTV_PrintToChat(slot, "\x07No maps in the map list.");
+		return;
+	}
+
+	CGlobalVars *globals = GetGameGlobals();
+	float curtime = globals ? globals->curtime : 0.0f;
+
+	ChatMenuDef def;
+	def.title = "Choose a map (immediate change)";
+	def.exitButton = true;
+	def.closeOnSelect = true;
+
+	for (const auto &e : maps)
+	{
+		const std::string &display = e.displayName.empty() ? e.mapName : e.displayName;
+		const MapEntry *entryPtr = &e;
+		def.AddItem(display,
+					[entryPtr](int /*playerSlot*/)
+					{
+						char cmd[256];
+						if (entryPtr->isWorkshop && !entryPtr->workshopId.empty())
+						{
+							snprintf(cmd, sizeof(cmd), "host_workshop_map %s\n", entryPtr->workshopId.c_str());
+						}
+						else
+						{
+							snprintf(cmd, sizeof(cmd), "changelevel %s\n", entryPtr->mapName.c_str());
+						}
+						g_pEngine->ServerCommand(cmd);
+					});
+	}
+
+	g_ChatMenus.ShowMenu(slot, def, curtime);
+}
+
+CGlobalVars *GetGameGlobals()
+{
+	INetworkGameServer *pServer = g_pNetworkServerService->GetIGameServer();
+	if (!pServer)
+	{
+		return nullptr;
+	}
+	return pServer->GetGlobals();
+}
+
 bool CS2RTVPlugin::Load(PluginId id, ISmmAPI *ismm, char *error, size_t maxlen, bool late)
 {
 	PLUGIN_SAVEVARS();
 
+	GET_V_IFACE_CURRENT(GetEngineFactory, g_pEngine, IVEngineServer, INTERFACEVERSION_VENGINESERVER);
+	GET_V_IFACE_CURRENT(GetEngineFactory, g_pICvar, ICvar, CVAR_INTERFACE_VERSION);
+	GET_V_IFACE_ANY(GetServerFactory, g_pServerGameDLL, IServerGameDLL, INTERFACEVERSION_SERVERGAMEDLL);
+	GET_V_IFACE_ANY(GetServerFactory, g_pGameClients, IServerGameClients, INTERFACEVERSION_SERVERGAMECLIENTS);
+	GET_V_IFACE_ANY(GetEngineFactory, g_pNetworkServerService, INetworkServerService, NETWORKSERVERSERVICE_INTERFACE_VERSION);
+	GET_V_IFACE_ANY(GetEngineFactory, g_pGameEventSystem, IGameEventSystem, GAMEEVENTSYSTEM_INTERFACE_VERSION);
+	GET_V_IFACE_ANY(GetEngineFactory, g_pNetworkMessages, INetworkMessages, NETWORKMESSAGES_INTERFACE_VERSION);
+
+	// INetworkMessages is acquired after AllPluginsLoaded when all interfaces are
+	// up
+
+	g_SMAPI->AddListener(this, this);
+
+	SH_ADD_HOOK(IServerGameDLL, GameFrame, g_pServerGameDLL, SH_MEMBER(this, &CS2RTVPlugin::Hook_GameFrame), true);
+	SH_ADD_HOOK(IServerGameClients, OnClientConnected, g_pGameClients, SH_MEMBER(this, &CS2RTVPlugin::Hook_OnClientConnected), false);
+	SH_ADD_HOOK(IServerGameClients, ClientPutInServer, g_pGameClients, SH_MEMBER(this, &CS2RTVPlugin::Hook_ClientPutInServer), true);
+	SH_ADD_HOOK(IServerGameClients, ClientDisconnect, g_pGameClients, SH_MEMBER(this, &CS2RTVPlugin::Hook_ClientDisconnect), true);
+	SH_ADD_HOOK(ICvar, DispatchConCommand, g_pICvar, SH_MEMBER(this, &CS2RTVPlugin::Hook_DispatchConCommand), false);
+
+	g_pCVar = g_pICvar;
+	META_CONVAR_REGISTER(FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE | FCVAR_GAMEDLL);
+
+	META_CONPRINTF("[CS2RTV] Plugin loaded.\n");
 	return true;
 }
 
 bool CS2RTVPlugin::Unload(char *error, size_t maxlen)
 {
+	SH_REMOVE_HOOK(IServerGameDLL, GameFrame, g_pServerGameDLL, SH_MEMBER(this, &CS2RTVPlugin::Hook_GameFrame), true);
+	SH_REMOVE_HOOK(IServerGameClients, OnClientConnected, g_pGameClients, SH_MEMBER(this, &CS2RTVPlugin::Hook_OnClientConnected), false);
+	SH_REMOVE_HOOK(IServerGameClients, ClientPutInServer, g_pGameClients, SH_MEMBER(this, &CS2RTVPlugin::Hook_ClientPutInServer), true);
+	SH_REMOVE_HOOK(IServerGameClients, ClientDisconnect, g_pGameClients, SH_MEMBER(this, &CS2RTVPlugin::Hook_ClientDisconnect), true);
+	SH_REMOVE_HOOK(ICvar, DispatchConCommand, g_pICvar, SH_MEMBER(this, &CS2RTVPlugin::Hook_DispatchConCommand), false);
+
+	g_Timers.KillAll();
+	RTV_HttpShutdown();
 	return true;
 }
 
 void CS2RTVPlugin::AllPluginsLoaded()
 {
+	RTV_AdminBridge_Init();
+}
+
+// IMetamodListener: map load/unload
+void CS2RTVPlugin::OnLevelInit(char const *pMapName, char const * /*pMapEntities*/, char const * /*pOldLevel*/, char const * /*pLandmarkName*/,
+							   bool /*loadGame*/, bool /*background*/)
+{
+	char cfgPath[512];
+	snprintf(cfgPath, sizeof(cfgPath), "%s/cfg/cs2rtv/core.cfg", g_SMAPI->GetBaseDir());
+	RTV_LoadConfig(cfgPath, g_RTVConfig);
+
+	char mapPath[512];
+	snprintf(mapPath, sizeof(mapPath), "%s/cfg/maplist.txt", g_SMAPI->GetBaseDir());
+	g_MapLister.LoadFromFile(mapPath);
+
+	g_MapVoteManager.NotifyMapChangeSucceeded(); // cancel failure-detection timer
+												 // before KillAll
+	g_Timers.KillAll();
+	g_RTVManager.OnMapStart(pMapName);
+	g_MapVoteManager.OnMapStart(pMapName);
+	g_NominateManager.OnMapStart(pMapName);
+}
+
+void CS2RTVPlugin::OnLevelShutdown()
+{
+	g_Timers.KillAll();
+	g_MapVoteManager.Reset();
+}
+
+void CS2RTVPlugin::Hook_GameFrame(bool /*simulating*/, bool /*bFirstTick*/, bool /*bLastTick*/)
+{
+	CGlobalVars *globals = GetGameGlobals();
+	if (!globals)
+	{
+		return;
+	}
+
+	float curtime = globals->curtime;
+	g_Timers.Process(curtime);
+	g_ChatMenus.Tick(curtime);
+
+	RETURN_META(MRES_IGNORED);
+}
+
+void CS2RTVPlugin::Hook_OnClientConnected(CPlayerSlot slot, const char *pszName, uint64 xuid, const char * /*pszNetworkID*/,
+										  const char * /*pszAddress*/, bool bFakePlayer)
+{
+	int s = slot.Get();
+	g_RTVPlayerManager.OnClientConnected(s, pszName ? pszName : "", xuid, "", bFakePlayer);
+	RETURN_META(MRES_IGNORED);
+}
+
+void CS2RTVPlugin::Hook_ClientPutInServer(CPlayerSlot slot, char const * /*pszName*/, int type, uint64 /*xuid*/)
+{
+	// type: 0=player, 1=bot
+	int s = slot.Get();
+	PlayerInfo *pi = g_RTVPlayerManager.GetPlayer(s);
+	if (pi)
+	{
+		// Update team later via other means; just mark connected
+	}
+	RETURN_META(MRES_IGNORED);
+}
+
+void CS2RTVPlugin::Hook_ClientDisconnect(CPlayerSlot slot, ENetworkDisconnectionReason /*reason*/, const char * /*pszName*/, uint64 /*xuid*/,
+										 const char * /*pszNetworkID*/)
+{
+	int s = slot.Get();
+	g_RTVManager.OnPlayerDisconnect(s);
+	g_MapVoteManager.OnPlayerDisconnect(s);
+	g_NominateManager.OnPlayerDisconnect(s);
+	g_ChatMenus.OnPlayerDisconnect(s);
+	g_RTVPlayerManager.OnClientDisconnect(s);
+	RETURN_META(MRES_IGNORED);
+}
+
+void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandContext &ctx, const CCommand &args)
+{
+	const char *cmdName = args.Arg(0);
+	if (!cmdName)
+	{
+		RETURN_META(MRES_IGNORED);
+	}
+
+	bool isSay = (strcmp(cmdName, "say") == 0 || strcmp(cmdName, "say_team") == 0);
+	if (!isSay)
+	{
+		RETURN_META(MRES_IGNORED);
+	}
+
+	int slot = ctx.GetPlayerSlot().Get();
+	if (slot < 0 || slot > MAXPLAYERS)
+	{
+		RETURN_META(MRES_IGNORED);
+	}
+
+	const char *rawMsg = args.ArgS(); // everything after the command name
+	if (!rawMsg || !rawMsg[0])
+	{
+		RETURN_META(MRES_IGNORED);
+	}
+
+	// Strip outer quotes that CS2 wraps around say message
+	char msg[512];
+	strncpy(msg, rawMsg, sizeof(msg) - 1);
+	msg[sizeof(msg) - 1] = '\0';
+
+	size_t len = strlen(msg);
+	if (len >= 2 && msg[0] == '"' && msg[len - 1] == '"')
+	{
+		memmove(msg, msg + 1, len - 2);
+		msg[len - 2] = '\0';
+		len -= 2;
+	}
+
+	CGlobalVars *globals = GetGameGlobals();
+	float curtime = globals ? globals->curtime : 0.0f;
+
+	if (g_ChatMenus.HasMenu(slot))
+	{
+		if (g_ChatMenus.ProcessInput(slot, msg, curtime))
+		{
+			RETURN_META(MRES_SUPERCEDE);
+		}
+	}
+
+	// Second pass: chat commands (must start with ! or /)
+	if (len < 2 || (msg[0] != '!' && msg[0] != '/'))
+	{
+		RETURN_META(MRES_IGNORED);
+	}
+
+	// Parse command + optional argument
+	char cmdBuf[64];
+	char argBuf[256] = "";
+
+	const char *space = strchr(msg + 1, ' ');
+	if (space)
+	{
+		size_t cmdLen = static_cast<size_t>(space - (msg + 1));
+		if (cmdLen >= sizeof(cmdBuf))
+		{
+			cmdLen = sizeof(cmdBuf) - 1;
+		}
+		strncpy(cmdBuf, msg + 1, cmdLen);
+		cmdBuf[cmdLen] = '\0';
+
+		// Skip leading whitespace in arg
+		const char *argStart = space + 1;
+		while (*argStart == ' ')
+		{
+			argStart++;
+		}
+		strncpy(argBuf, argStart, sizeof(argBuf) - 1);
+		argBuf[sizeof(argBuf) - 1] = '\0';
+	}
+	else
+	{
+		strncpy(cmdBuf, msg + 1, sizeof(cmdBuf) - 1);
+		cmdBuf[sizeof(cmdBuf) - 1] = '\0';
+	}
+
+	if (strcmp(cmdBuf, "rtv") == 0)
+	{
+		if (g_MapVoteManager.IsVoteActive())
+		{
+			g_MapVoteManager.ShowVoteMenuToPlayer(slot);
+		}
+		else
+		{
+			g_RTVManager.CommandHandler(slot,
+										[]()
+										{
+											auto noms = g_NominateManager.GetNominations();
+											g_MapVoteManager.StartVote(true, noms);
+										});
+		}
+		RETURN_META(MRES_SUPERCEDE);
+	}
+
+	if (strcmp(cmdBuf, "nominate") == 0 || strcmp(cmdBuf, "nom") == 0)
+	{
+		if (g_RTVConfig.nominate.enabled)
+		{
+			g_NominateManager.CommandNominate(slot, argBuf);
+		}
+		else
+		{
+			RTV_PrintToChat(slot, "\x07Nominations are disabled.");
+		}
+		RETURN_META(MRES_SUPERCEDE);
+	}
+
+	if (strcmp(cmdBuf, "mapmenu") == 0 || strcmp(cmdBuf, "mm") == 0)
+	{
+		const std::string &permName = g_RTVConfig.mapchooser.permission;
+		uint32_t flag = permName.empty() ? 0 : RTV_ParseFlagName(permName);
+		if (flag != 0 && !RTV_AdminBridge_HasFlag(slot, flag))
+		{
+			RTV_PrintToChat(slot, "\x07You don't have permission to use this command.");
+			RETURN_META(MRES_SUPERCEDE);
+		}
+		ShowMapChooserMenu(slot);
+		RETURN_META(MRES_SUPERCEDE);
+	}
+
+	if (strcmp(cmdBuf, "maps") == 0)
+	{
+		g_NominateManager.CommandMaps(slot);
+		RETURN_META(MRES_SUPERCEDE);
+	}
+
+	if (strcmp(cmdBuf, "reloadmaps") == 0)
+	{
+		g_NominateManager.CommandReloadMaps(slot);
+		RETURN_META(MRES_SUPERCEDE);
+	}
+
+	if (strcmp(cmdBuf, "revote") == 0)
+	{
+		g_MapVoteManager.CommandRevote(slot);
+		RETURN_META(MRES_SUPERCEDE);
+	}
+
+	if (strcmp(cmdBuf, "reloadrtv") == 0)
+	{
+		const std::string &permName = g_RTVConfig.general.adminPermission;
+		uint32_t flag = permName.empty() ? 0 : RTV_ParseFlagName(permName);
+		if (flag != 0 && !RTV_AdminBridge_HasFlag(slot, flag))
+		{
+			RTV_PrintToChat(slot, "\x07You don't have permission to use this command.");
+			RETURN_META(MRES_SUPERCEDE);
+		}
+
+		char cfgPath[512];
+		snprintf(cfgPath, sizeof(cfgPath), "%s/cfg/cs2rtv/core.cfg", g_SMAPI->GetBaseDir());
+		if (RTV_LoadConfig(cfgPath, g_RTVConfig))
+		{
+			RTV_PrintToChat(slot, "\x04RTV config reloaded.");
+		}
+		else
+		{
+			RTV_PrintToChat(slot, "\x07"
+								  "Failed to reload RTV config.");
+		}
+		RETURN_META(MRES_SUPERCEDE);
+	}
+
+	RETURN_META(MRES_IGNORED);
+}
+
+CON_COMMAND_F(mm_rtv, "Rock the vote for a map change", FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE)
+{
+	int slot = context.GetPlayerSlot().Get();
+	if (g_MapVoteManager.IsVoteActive())
+	{
+		g_MapVoteManager.ShowVoteMenuToPlayer(slot);
+	}
+	else
+	{
+		g_RTVManager.CommandHandler(slot,
+									[]()
+									{
+										auto noms = g_NominateManager.GetNominations();
+										g_MapVoteManager.StartVote(true, noms);
+									});
+	}
+}
+
+CON_COMMAND_F(mm_nominate, "Nominate a map for the next vote", FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE)
+{
+	int slot = context.GetPlayerSlot().Get();
+	if (!g_RTVConfig.nominate.enabled)
+	{
+		RTV_PrintToChat(slot, "\x07Nominations are disabled.");
+		return;
+	}
+	const char *arg = args.ArgC() > 1 ? args[1] : "";
+	g_NominateManager.CommandNominate(slot, arg);
+}
+
+CON_COMMAND_F(mm_maps, "List available maps to your console", FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE)
+{
+	int slot = context.GetPlayerSlot().Get();
+	g_NominateManager.CommandMaps(slot);
+}
+
+CON_COMMAND_F(mm_reloadmaps, "Reload the map list from disk", FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE)
+{
+	int slot = context.GetPlayerSlot().Get();
+	g_NominateManager.CommandReloadMaps(slot);
+}
+
+CON_COMMAND_F(mm_revote, "Change your vote in an active map vote", FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE)
+{
+	int slot = context.GetPlayerSlot().Get();
+	g_MapVoteManager.CommandRevote(slot);
+}
+
+CON_COMMAND_F(mm_mapmenu, "Admin: open immediate map change menu", FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE)
+{
+	int slot = context.GetPlayerSlot().Get();
+	const std::string &permName = g_RTVConfig.mapchooser.permission;
+	uint32_t flag = permName.empty() ? 0 : RTV_ParseFlagName(permName);
+	if (flag != 0 && !RTV_AdminBridge_HasFlag(slot, flag))
+	{
+		RTV_PrintToChat(slot, "\x07You don't have permission to use this command.");
+		return;
+	}
+	ShowMapChooserMenu(slot);
+}
+
+CON_COMMAND_F(mm_reloadrtv, "Admin: reload cs2rtv config from disk", FCVAR_RELEASE | FCVAR_CLIENT_CAN_EXECUTE)
+{
+	int slot = context.GetPlayerSlot().Get();
+	const std::string &permName = g_RTVConfig.general.adminPermission;
+	uint32_t flag = permName.empty() ? 0 : RTV_ParseFlagName(permName);
+	if (flag != 0 && !RTV_AdminBridge_HasFlag(slot, flag))
+	{
+		RTV_PrintToChat(slot, "\x07You don't have permission to use this command.");
+		return;
+	}
+	char cfgPath[512];
+	snprintf(cfgPath, sizeof(cfgPath), "%s/cfg/cs2rtv/core.cfg", g_SMAPI->GetBaseDir());
+	if (RTV_LoadConfig(cfgPath, g_RTVConfig))
+	{
+		RTV_PrintToChat(slot, "\x04RTV config reloaded.");
+	}
+	else
+	{
+		RTV_PrintToChat(slot, "\x07"
+							  "Failed to reload RTV config.");
+	}
 }
