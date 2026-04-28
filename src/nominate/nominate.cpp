@@ -75,7 +75,7 @@ void NominateManager::CommandNominate(int slot, const char *arg)
 	const std::string &nomPerm = g_RTVConfig.nominate.permission;
 	if (!nomPerm.empty())
 	{
-		uint32_t flag = NomParseFlagName(nomPerm);
+		uint32_t flag = RTV_ParseFlagName(nomPerm);
 		if (!RTV_AdminBridge_HasFlag(slot, flag))
 		{
 			RTV_PrintToChat(slot, "\x07You don't have permission to nominate.");
@@ -94,7 +94,7 @@ void NominateManager::CommandNominate(int slot, const char *arg)
 		const std::string &extPerm = g_RTVConfig.nominate.externalNominatePermission;
 		if (!extPerm.empty())
 		{
-			uint32_t flag = NomParseFlagName(extPerm);
+			uint32_t flag = RTV_ParseFlagName(extPerm);
 			if (!RTV_AdminBridge_HasFlag(slot, flag))
 			{
 				RTV_PrintToChat(slot, "\x07You don't have permission to nominate workshop maps by ID.");
@@ -137,7 +137,7 @@ void NominateManager::CommandNominate(int slot, const char *arg)
 		const std::string &extPerm = g_RTVConfig.nominate.externalNominatePermission;
 		if (!extPerm.empty())
 		{
-			uint32_t flag = NomParseFlagName(extPerm);
+			uint32_t flag = RTV_ParseFlagName(extPerm);
 			if (!RTV_AdminBridge_HasFlag(slot, flag))
 			{
 				RTV_PrintToChat(slot, "\x07Map \x04%s\x07 not found in map list.", arg);
