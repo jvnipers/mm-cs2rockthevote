@@ -268,17 +268,21 @@ void CS2RTVPlugin::Hook_DispatchConCommand(ConCommandRef cmd, const CCommandCont
 		RETURN_META(MRES_IGNORED);
 	}
 
-	const char cmdPfxChar = g_RTVConfig.general.commandPrefix.empty() ? '!' : g_RTVConfig.general.commandPrefix[0];
-	const char silentPfxChar = g_RTVConfig.general.silentCommandPrefix.empty() ? '/' : g_RTVConfig.general.silentCommandPrefix[0];
+	// Each config string is treated as a set of prefix characters.
+	// CommandPrefix       = chars that trigger command but leave message visible
+	// SilentCommandPrefix = chars that trigger command and suppress the message
+	// A char in both sets is treated as silent.
+	const std::string &normalPfx = g_RTVConfig.general.commandPrefix;
+	const std::string &silentPfx = g_RTVConfig.general.silentCommandPrefix;
 
 	bool isSilent;
-	if (msg[0] == cmdPfxChar)
-	{
-		isSilent = false;
-	}
-	else if (msg[0] == silentPfxChar)
+	if (!silentPfx.empty() && silentPfx.find(msg[0]) != std::string::npos)
 	{
 		isSilent = true;
+	}
+	else if (!normalPfx.empty() && normalPfx.find(msg[0]) != std::string::npos)
+	{
+		isSilent = false;
 	}
 	else
 	{

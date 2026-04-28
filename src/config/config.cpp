@@ -175,17 +175,11 @@ static void ConfigHandler(const std::string &section, const std::string &key, co
 		}
 		else if (k == "commandprefix")
 		{
-			if (!value.empty())
-			{
-				cfg->general.commandPrefix = value;
-			}
+			cfg->general.commandPrefix = value;
 		}
 		else if (k == "silentcommandprefix")
 		{
-			if (!value.empty())
-			{
-				cfg->general.silentCommandPrefix = value;
-			}
+			cfg->general.silentCommandPrefix = value;
 		}
 	}
 }
