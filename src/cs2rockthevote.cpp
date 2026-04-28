@@ -131,6 +131,7 @@ bool CS2RTVPlugin::Unload(char *error, size_t maxlen)
 
 	g_Timers.KillAll();
 	RTV_HttpShutdown();
+	RTV_DrainMainThread(); // discard any queued game-state callbacks from completed requests
 	return true;
 }
 
@@ -174,6 +175,7 @@ void CS2RTVPlugin::Hook_GameFrame(bool /*simulating*/, bool /*bFirstTick*/, bool
 	}
 
 	float curtime = globals->curtime;
+	RTV_DrainMainThread();
 	g_Timers.Process(curtime);
 	g_ChatMenus.Tick(curtime);
 

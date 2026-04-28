@@ -40,6 +40,30 @@ static std::condition_variable s_cv;
 static std::queue<HttpRequest> s_queue;
 static std::atomic<bool> s_running {false};
 
+// Main-thread dispatch queue
+static std::mutex s_mainMutex;
+static std::vector<std::function<void()>> s_mainQueue;
+static std::vector<std::function<void()>> s_mainDrain; // swap target
+
+void RTV_QueueMainThread(std::function<void()> fn)
+{
+	std::lock_guard<std::mutex> lock(s_mainMutex);
+	s_mainQueue.push_back(std::move(fn));
+}
+
+void RTV_DrainMainThread()
+{
+	{
+		std::lock_guard<std::mutex> lock(s_mainMutex);
+		s_mainDrain.swap(s_mainQueue);
+	}
+	for (auto &fn : s_mainDrain)
+	{
+		fn();
+	}
+	s_mainDrain.clear();
+}
+
 #ifdef _WIN32
 
 static bool PerformRequest(const HttpRequest &req, std::string &outBody)
@@ -90,6 +114,11 @@ static bool PerformRequest(const HttpRequest &req, std::string &outBody)
 		WinHttpCloseHandle(hSession);
 		return false;
 	}
+
+	// Set timeouts: resolve=5s, connect=5s, send=15s, receive=15s
+	DWORD t5s  = 5000;
+	DWORD t15s = 15000;
+	WinHttpSetTimeouts(hRequest, t5s, t5s, t15s, t15s);
 
 	// Headers
 	std::wstring headers;

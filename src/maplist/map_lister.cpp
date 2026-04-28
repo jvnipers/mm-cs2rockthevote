@@ -458,7 +458,9 @@ void MapLister::LookupByWorkshopIdAsync(const std::string &workshopId, std::func
 										  });
 						if (parsed)
 						{
-							callback(std::move(found));
+							// Dispatch to game thread: callback touches game state.
+							MapEntry captured = std::move(found);
+							RTV_QueueMainThread([callback, captured]() mutable { callback(std::move(captured)); });
 							return;
 						}
 					}
@@ -485,9 +487,11 @@ void MapLister::LookupByWorkshopIdAsync(const std::string &workshopId, std::func
 											 fallback.isWorkshop = true;
 										 }
 									 }
-									 callback(std::move(fallback));
-								 });
-				});
+							 // Dispatch to game thread: callback touches game state.
+							 MapEntry captured = std::move(fallback);
+							 RTV_QueueMainThread([callback, captured]() mutable { callback(std::move(captured)); });
+						 });
+			});
 }
 
 void MapLister::LookupByNameAsync(const std::string &name, std::function<void(MapEntry)> callback) const
@@ -508,8 +512,9 @@ void MapLister::LookupByNameAsync(const std::string &name, std::function<void(Ma
 											  }
 										  });
 					}
-					callback(std::move(found));
-				});
+					// Dispatch to game thread: callback touches game state.
+					MapEntry captured = std::move(found);
+					RTV_QueueMainThread([callback, captured]() mutable { callback(std::move(captured)); });
 }
 
 void MapLister::GenerateMaplistAsync(const std::string &outputPath) const
@@ -533,12 +538,12 @@ void MapLister::GenerateMaplistAsync(const std::string &outputPath) const
 	{
 		std::shared_ptr<State> st;
 
-		void Fetch()
+		void Fetch(std::shared_ptr<Fetcher> self)
 		{
 			std::string url = "https://api.cs2kz.org/maps?state=approved&limit=500&offset=" + std::to_string(st->offset);
 
 			RTV_HttpGet(url,
-						[this](bool ok, std::string body)
+						[this, self](bool ok, std::string body) mutable
 						{
 							if (!ok || body.empty())
 							{
@@ -561,7 +566,7 @@ void MapLister::GenerateMaplistAsync(const std::string &outputPath) const
 							if (added > 0)
 							{
 								st->offset += 500;
-								Fetch();
+								Fetch(self);
 							}
 							else
 							{
@@ -604,7 +609,7 @@ void MapLister::GenerateMaplistAsync(const std::string &outputPath) const
 
 	auto fetcher = std::make_shared<Fetcher>();
 	fetcher->st = state;
-	fetcher->Fetch();
+	fetcher->Fetch(fetcher);
 }
 
 void MapLister::ValidateMapsAsync() const
