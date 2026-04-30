@@ -7,6 +7,7 @@
 struct PlayerInfo
 {
 	bool connected = false;
+	bool inGame = false; // true once ClientPutInServer fires (excludes challenging/half-connected slots)
 	uint64_t steamid64 = 0;
 	std::string name;
 	bool fakePlayer = false;
@@ -15,6 +16,7 @@ struct PlayerInfo
 	void Reset()
 	{
 		connected = false;
+		inGame = false;
 		steamid64 = 0;
 		name.clear();
 		fakePlayer = false;
@@ -26,6 +28,7 @@ class RTVPlayerManager
 {
 public:
 	void OnClientConnected(int slot, const char *name, uint64_t xuid, const char *address, bool fakePlayer);
+	void OnClientPutInServer(int slot);
 	void OnClientDisconnect(int slot);
 
 	PlayerInfo *GetPlayer(int slot);

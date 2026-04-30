@@ -192,15 +192,11 @@ void CS2RTVPlugin::Hook_OnClientConnected(CPlayerSlot slot, const char *pszName,
 	RETURN_META(MRES_IGNORED);
 }
 
-void CS2RTVPlugin::Hook_ClientPutInServer(CPlayerSlot slot, char const * /*pszName*/, int type, uint64 /*xuid*/)
+void CS2RTVPlugin::Hook_ClientPutInServer(CPlayerSlot slot, char const * /*pszName*/, int /*type*/, uint64 /*xuid*/)
 {
 	// type: 0=player, 1=bot
 	int s = slot.Get();
-	PlayerInfo *pi = g_RTVPlayerManager.GetPlayer(s);
-	if (pi)
-	{
-		// Update team later via other means; just mark connected
-	}
+	g_RTVPlayerManager.OnClientPutInServer(s);
 	RETURN_META(MRES_IGNORED);
 }
 

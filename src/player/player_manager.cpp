@@ -28,6 +28,16 @@ void RTVPlayerManager::OnClientDisconnect(int slot)
 	m_players[slot].Reset();
 }
 
+void RTVPlayerManager::OnClientPutInServer(int slot)
+{
+	if (slot < 0 || slot > MAXPLAYERS)
+	{
+		return;
+	}
+
+	m_players[slot].inGame = true;
+}
+
 PlayerInfo *RTVPlayerManager::GetPlayer(int slot)
 {
 	if (slot < 0 || slot > MAXPLAYERS)
@@ -43,7 +53,7 @@ int RTVPlayerManager::GetHumanPlayerCount() const
 	for (int i = 0; i <= MAXPLAYERS; i++)
 	{
 		const PlayerInfo &p = m_players[i];
-		if (p.connected && !p.fakePlayer)
+		if (p.connected && p.inGame && !p.fakePlayer)
 		{
 			count++;
 		}
@@ -57,7 +67,7 @@ int RTVPlayerManager::GetEligiblePlayerCount() const
 	for (int i = 0; i <= MAXPLAYERS; i++)
 	{
 		const PlayerInfo &p = m_players[i];
-		if (!p.connected || p.fakePlayer)
+		if (!p.connected || !p.inGame || p.fakePlayer)
 		{
 			continue;
 		}
