@@ -20,6 +20,7 @@ for sdk_target in MMSPlugin.sdk_targets:
     'src/vote/map_vote.cpp',
     'src/nominate/nominate.cpp',
     'src/admin/admin_bridge.cpp',
+    'src/whitelist/whitelist_bridge.cpp',
   ]
 
   binary.custom = [builder.tools.Protoc(protoc = sdk_target.protoc, sources = [

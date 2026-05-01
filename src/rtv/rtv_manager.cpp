@@ -3,6 +3,7 @@
 #include "src/player/player_manager.h"
 #include "src/timers/timer_system.h"
 #include "src/utils/print_utils.h"
+#include "src/whitelist/whitelist_bridge.h"
 
 #include <algorithm>
 #include <cmath>
@@ -72,6 +73,15 @@ void RTVManager::CommandHandler(int slot, StartVoteCallback startVote)
 	if (!cfg.enabled)
 	{
 		RTV_PrintToChat(slot, "\x07RTV is currently disabled.");
+		return;
+	}
+
+	// Whitelist gate: when mm-cs2whitelist is loaded, only whitelisted players
+	// may trigger RTV.  This prevents non-whitelisted joiners from spamming
+	// !rtv during the brief window before the whitelist kick fires.
+	if (RTV_WhitelistBridge_Available() && !RTV_WhitelistBridge_IsPlayerAllowed(slot))
+	{
+		RTV_PrintToChat(slot, "\x07You must be whitelisted to use RTV.");
 		return;
 	}
 

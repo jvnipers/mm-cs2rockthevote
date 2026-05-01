@@ -14,6 +14,7 @@
 #include "utils/http_client.h"
 #include "utils/print_utils.h"
 #include "vote/map_vote.h"
+#include "whitelist/whitelist_bridge.h"
 
 #include <engine/igameeventsystem.h>
 #include <iserver.h>
@@ -140,6 +141,7 @@ bool CS2RTVPlugin::Unload(char *error, size_t maxlen)
 void CS2RTVPlugin::AllPluginsLoaded()
 {
 	RTV_AdminBridge_Init();
+	RTV_WhitelistBridge_Init();
 }
 
 // IMetamodListener: map load/unload
