@@ -8,3 +8,6 @@
 [submodule "vendor/mm-cs2admin"]
 	path = vendor/mm-cs2admin
 	url = https://github.com/Femboykz/mm-cs2admin
+[submodule "vendor/mm-cs2whitelist"]
+	path = vendor/mm-cs2whitelist
+	url = https://github.com/Femboykz/mm-cs2whitelist
