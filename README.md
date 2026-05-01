@@ -1,6 +1,8 @@
 # CS2 Rock The Vote
 
-CS2 rtv plugin using Metamod: Source
+![Downloads](https://img.shields.io/github/downloads/FemboyKZ/mm-cs2rockthevote/total?style=flat-square) ![Last commit](https://img.shields.io/github/last-commit/FemboyKZ/mm-cs2rockthevote?style=flat-square) ![Open issues](https://img.shields.io/github/issues/FemboyKZ/mm-cs2rockthevote?style=flat-square) ![Closed issues](https://img.shields.io/github/issues-closed/FemboyKZ/mm-cs2rockthevote?style=flat-square) ![Size](https://img.shields.io/github/repo-size/FemboyKZ/mm-cs2rockthevote?style=flat-square) ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/FemboyKZ/mm-cs2rockthevote/build.yml?style=flat-square)
+
+CS2 RTV Plugin using Metamod: Source
 
 ## Usage
 

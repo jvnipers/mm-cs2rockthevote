@@ -12,7 +12,7 @@ void RTV_WhitelistBridge_Init();
 // Returns true if the whitelist plugin is loaded.
 bool RTV_WhitelistBridge_Available();
 
-// Returns true if the player at this slot is allowed to use RTV-related commands. 
+// Returns true if the player at this slot is allowed to use RTV-related commands.
 // When the whitelist plugin is not loaded this always returns true.
 // When loaded, the player must pass the whitelist check (or be in the confirmed-allowed cache for this map).
 // Console (slot < 0) always passes.
