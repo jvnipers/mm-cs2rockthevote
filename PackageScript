@@ -46,7 +46,7 @@ class SDKPackage:
     vdf_content = '"Metamod Plugin"\n'
     vdf_content += '{\n'
     vdf_content += f'\t"alias"\t"{MMSPlugin.metadata["alias"]}"\n'
-    vdf_content += f'\t"file"\t"{os.path.join(os.path.relpath(self.bin_path, self.sdk_name), MMSPlugin.metadata["name"])}"\n'
+    vdf_content += f'\t"file"\t"{os.path.join(self.bin_path, MMSPlugin.metadata["name"]).replace(os.sep, "/")}"\n'
     vdf_content += '}'
 
     builder.AddOutputFile(os.path.join(self.metamod_path, f'{MMSPlugin.metadata["name"]}.vdf'), vdf_content.encode('utf8'))
